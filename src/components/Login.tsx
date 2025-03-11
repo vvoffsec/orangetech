@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import styled, { keyframes, css } from 'styled-components';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 
 const Container = styled.div`
   position: relative;
@@ -199,7 +199,7 @@ const CloseButton = styled.button`
 const Landing: React.FC = () => {
   const [modalType, setModalType] = useState<"signup" | "login" | null>(null);
   const [closing, setClosing] = useState(false);
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   const openModal = (type: "signup" | "login") => {
     setModalType(type);
@@ -221,7 +221,7 @@ const Landing: React.FC = () => {
 
       <Title>Join a community of foodies!</Title>
       <Subtitle>
-        Welcome to a simple, fun and creative way to find new recipes
+        Welcome to a simple, fun and creative way to find new recipes.
       </Subtitle>
 
       <ButtonGroup>
