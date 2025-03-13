@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { FiArrowLeft } from 'react-icons/fi';
+import { FiArrowLeft, FiX } from 'react-icons/fi';
+
+// 1) Import Firebase auth functions
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../firebase';
 
 const Container = styled.div`
   position: relative;
@@ -85,19 +89,59 @@ const SignInButton = styled.button`
   }
 `;
 
+const Notification = styled.div`
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ff4d4f;
+  color: #fff;
+  padding: 0.8rem 1.2rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
 const SignIn: React.FC = () => {
   const navigate = useNavigate();
   const [usernameOrEmail, setUsernameOrEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
-  const handleSignIn = (e: React.FormEvent) => {
+  // Auto-dismiss error after 5 seconds
+  useEffect(() => {
+    if(error) {
+      const timer = setTimeout(() => setError(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
+  // 2) Handle sign in using Firebase
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Add sign-in logic here
-    alert('Sign In clicked!');
+    console.log("handleSignIn called");
+    try {
+      // Sign in with Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, usernameOrEmail, password);
+      console.log("User signed in:", userCredential.user);
+      navigate("/");
+    } catch (error) {
+      console.error("Sign-in error:", error);
+      setError((error as Error).message);
+    }
   };
 
   return (
     <Container>
+      {error && (
+        <Notification>
+          <span>{error}</span>
+          <FiX onClick={() => setError('')} style={{ cursor: 'pointer' }} />
+        </Notification>
+      )}
       <BackButton onClick={() => navigate('/')}>
         <FiArrowLeft />
       </BackButton>
