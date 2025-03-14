@@ -1,0 +1,34 @@
+name: Security Scanning Workflow
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  codeql-analysis:
+    name: Perform CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        # with:
+        #   languages: ['javascript']
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+
+  is-website-vulnerable:
+    name: Is Website Vulnerable
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test for public javascript library vulnerabilities 
+        uses: lirantal/is-website-vulnerable@main
+        with:
+          scan-url: "https://orangetech-ten.vercel.app/"
