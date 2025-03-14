@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  updateProfile, // <-- make sure to import updateProfile
 } from 'firebase/auth';
 import { auth } from '../firebase';
 
@@ -236,15 +237,6 @@ const Notification = styled.div`
 `;
 
 // --------------- PASSWORD REQUIREMENTS ---------------
-/**
- * These checks match the Firebase password policy settings:
- * - At least 6 characters
- * - At most 4096 characters
- * - Contains uppercase letter
- * - Contains lowercase letter
- * - Contains numeric character
- * - Contains special character
- */
 const passwordRequirements = [
   {
     label: 'At least 6 characters',
@@ -270,7 +262,7 @@ const passwordRequirements = [
 
 // --------------- MAIN COMPONENT ---------------
 const Landing: React.FC = () => {
-  console.log('Landing component rendered');
+  // console.log('Landing component rendered');
 
   const navigate = useNavigate();
   const [modalType, setModalType] = useState<"signup" | "login" | null>(null);
@@ -280,14 +272,19 @@ const Landing: React.FC = () => {
   // State for form inputs
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  // Only used for signup mode
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  // NEW: First and Last name for signup
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
 
   const openModal = (type: "signup" | "login") => {
     // Reset inputs when opening a modal
     setEmail('');
     setPassword('');
     setConfirmPassword('');
+    setFirstName('');
+    setLastName('');
     setError('');
     setModalType(type);
   };
@@ -311,40 +308,53 @@ const Landing: React.FC = () => {
   }, [error]);
 
   // --------------- HANDLE SUBMIT ---------------
-const handleSubmit = async () => {
-  if (modalType === 'login') {
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log('User signed in:', userCredential.user);
-      closeModal(); // play the closing animation
-      navigate('/dashboard'); // go to the dashboard
-    } catch (error) {
-      console.error('Sign-in error:', error);
-      setError((error as Error).message);
+  const handleSubmit = async () => {
+    if (modalType === 'login') {
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        console.log('User signed in:', userCredential.user);
+        closeModal();
+        navigate('/dashboard'); // go to the dashboard
+      } catch (error) {
+        console.error('Sign-in error:', error);
+        setError((error as Error).message);
+      }
+    } else if (modalType === 'signup') {
+      // Validate password
+      if (password !== confirmPassword) {
+        setError('Passwords do not match');
+        return;
+      }
+      // Basic check for first/last name if you want:
+      if (!firstName.trim() || !lastName.trim()) {
+        setError('Please enter both first and last name.');
+        return;
+      }
+
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        // Update the user's profile with first/last name
+        await updateProfile(userCredential.user, {
+          displayName: `${firstName} ${lastName}`,
+        });
+        console.log('User signed up successfully');
+        // Transition to the login modal or directly navigate:
+        setClosing(true);
+        setTimeout(() => {
+          setModalType('login');
+          setClosing(false);
+          setPassword('');
+          setConfirmPassword('');
+          setFirstName('');
+          setLastName('');
+        }, 300);
+      } catch (error) {
+        console.error('Sign-up error:', error);
+        setError((error as Error).message);
+      }
     }
-  } else if (modalType === 'signup') {
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-    try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      console.log('User signed up successfully');
-      // Instead of navigating to /signin, transition to the login modal:
-      setClosing(true);
-      setTimeout(() => {
-        setModalType('login');
-        setClosing(false);
-        // Optionally clear password fields or pre-fill email for login:
-        setPassword('');
-        setConfirmPassword('');
-      }, 300);
-    } catch (error) {
-      console.error('Sign-up error:', error);
-      setError((error as Error).message);
-    }
-  }
-};
+  };
+
   // --------------- RENDER ---------------
   return (
     <Container>
@@ -377,7 +387,28 @@ const handleSubmit = async () => {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              required
             />
+
+            {/* Show First/Last Name fields only for Sign Up */}
+            {modalType === 'signup' && (
+              <>
+                <Input
+                  type="text"
+                  placeholder="First Name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                />
+                <Input
+                  type="text"
+                  placeholder="Last Name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                />
+              </>
+            )}
 
             {/* Password */}
             <Input
@@ -385,6 +416,7 @@ const handleSubmit = async () => {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              required
             />
 
             {/* Confirm Password (Signup only) */}
@@ -394,6 +426,7 @@ const handleSubmit = async () => {
                 placeholder="Confirm Password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                required
               />
             )}
 
@@ -405,7 +438,14 @@ const handleSubmit = async () => {
                   {passwordRequirements.map((req) => {
                     const isValid = req.test(password);
                     return (
-                      <li key={req.label} style={{ display: 'flex', alignItems: 'center', margin: '0.3rem 0' }}>
+                      <li
+                        key={req.label}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          margin: '0.3rem 0',
+                        }}
+                      >
                         {isValid ? <FiCheck color="green" /> : <FiX color="red" />}
                         <span style={{ marginLeft: '0.5rem' }}>{req.label}</span>
                       </li>
