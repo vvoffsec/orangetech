@@ -5,7 +5,7 @@ import { FiArrowLeft, FiX } from 'react-icons/fi';
 import { FaGoogle, FaTwitter, FaFacebookF } from 'react-icons/fa';
 
 // 1) Import Firebase auth functions
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth } from '../firebase';
 
 const Container = styled.div`
@@ -138,15 +138,16 @@ const Notification = styled.div`
 
 const SignUp: React.FC = () => {
   const navigate = useNavigate();
-  const [mobileOrEmail, setMobileOrEmail] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
+  const [mobileOrEmail, setMobileOrEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
   // Auto-dismiss error after 5 seconds
   useEffect(() => {
-    if(error) {
+    if (error) {
       const timer = setTimeout(() => setError(''), 5000);
       return () => clearTimeout(timer);
     }
@@ -155,24 +156,31 @@ const SignUp: React.FC = () => {
   // 2) Handle sign up using Firebase
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("handleSignUp called");
     try {
-      // Create user with Firebase (treat mobileOrEmail as the "email" for now)
+      // Create user with Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         mobileOrEmail,
         password
       );
-      console.log("User signed up:", userCredential.user);
-      navigate("/signin");
-    } catch (error) {
-      console.error("Sign-up error:", error);
-      setError((error as Error).message);
+      const user = userCredential.user;
+      if (user) {
+        // Store first and last name in Firebase Auth user profile
+        await updateProfile(user, {
+          displayName: `${firstName} ${lastName}`
+        });
+      }
+      console.log('User signed up:', user);
+      navigate('/signin'); // redirect to sign-in after successful signup
+    } catch (err) {
+      console.error('Sign-up error:', err);
+      setError((err as Error).message);
     }
   };
 
   return (
     <Container>
+      {/* Error notification (if any) */}
       {error && (
         <Notification>
           <span>{error}</span>
@@ -182,21 +190,22 @@ const SignUp: React.FC = () => {
       <BackButton onClick={() => navigate('/')}>
         <FiArrowLeft />
       </BackButton>
+
       <FormWrapper>
         <Title>Sign up to see photos and videos from your friends.</Title>
         <form onSubmit={handleSignUp} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <Input
             type="text"
-            placeholder="Mobile Number or Email"
-            value={mobileOrEmail}
-            onChange={(e) => setMobileOrEmail(e.target.value)}
+            placeholder="First Name"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
             required
           />
           <Input
             type="text"
-            placeholder="Full Name"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Last Name"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
             required
           />
           <Input
@@ -204,6 +213,13 @@ const SignUp: React.FC = () => {
             placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            required
+          />
+          <Input
+            type="text"
+            placeholder="Mobile Number or Email"
+            value={mobileOrEmail}
+            onChange={(e) => setMobileOrEmail(e.target.value)}
             required
           />
           <Input
