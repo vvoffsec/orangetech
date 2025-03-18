@@ -9,6 +9,8 @@ import {
   updateProfile, // <-- make sure to import updateProfile
 } from 'firebase/auth';
 import { auth } from '../firebase';
+import { db } from '../firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 // React Icons for notifications and password validation
 import { FiCheck, FiX } from 'react-icons/fi';
@@ -338,6 +340,15 @@ const Landing: React.FC = () => {
           displayName: `${firstName} ${lastName}`,
         });
         console.log('User signed up successfully');
+
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+          firstName,
+          lastName,
+          email,
+          createdAt: Date.now(),
+          // You can add more fields if needed
+        });
+        
         // Transition to the login modal or directly navigate:
         setClosing(true);
         setTimeout(() => {
